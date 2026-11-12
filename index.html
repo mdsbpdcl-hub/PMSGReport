@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM Surya Ghar Report Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<style>
+:root {
+  --t1: #f0752f; --t2: #f7a531; --t1a: rgba(240, 117, 47, .16); --t2a: rgba(247, 165, 49, .14); --t1s: rgba(240, 117, 47, .09);
+  --bg: #f5f6fa; --card: #fff; --ink: #1d2433; --muted: #667085; --faint: #98a2b3; --line: #e7eaf0; --track: #eef0f5;
+  --sb: #2a78d6; --nb: #eb6834;
+  --good: #1a8a4c; --good-c: #22a35a; --good-bg: #eaf8f0; --warn: #9a6400; --warn-c: #e3a21a; --warn-bg: #fff7e4; --bad: #b8352b; --bad-c: #df4b3f; --bad-bg: #fff0ee;
+  --font: "Outfit", "Segoe UI", system-ui, sans-serif; --r: 18px;
+  --sh: 0 1px 2px rgba(29, 36, 51, .04), 0 10px 28px -14px rgba(29, 36, 51, .22);
+  --sh-up: 0 2px 4px rgba(29, 36, 51, .05), 0 18px 34px -16px rgba(29, 36, 51, .3);
+  --ease: cubic-bezier(.22, .8, .3, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font: 400 15px/1.45 var(--font); color: var(--ink); background-color: var(--bg); overflow-x: hidden;
+  background-image: radial-gradient(1100px 520px at -5% -8%, var(--t1a), transparent 62%), radial-gradient(900px 480px at 105% 4%, var(--t2a), transparent 60%); background-attachment: fixed; }
+button, input { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+button:focus-visible, input:focus-visible, label.drop:focus-within { outline: 3px solid var(--t1); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+.card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px 20px; min-width: 0; }
+h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.01em; }
+h2 { font-size: 19px; }
+.sub { color: var(--muted); font-size: 13.5px; margin: 3px 0 0; }
+
+.top { position: sticky; top: 0; z-index: 20; background: rgba(255, 255, 255, .72); -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid rgba(231, 234, 240, .9); }
+.top-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-top: 12px; padding-bottom: 12px; }
+.brand { display: flex; align-items: center; gap: 12px; flex: 1 1 260px; min-width: 0; }
+.badge { flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(135deg, var(--t1), var(--t2)); box-shadow: 0 8px 18px -8px var(--t1); color: #fff; }
+.brand h1 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.15; }
+.brand p { margin: 1px 0 0; color: var(--muted); font-size: 13.5px; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.dots { display: inline-flex; gap: 7px; }
+.dots button { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; padding: 0; box-shadow: 0 0 0 1px var(--line); }
+.dots button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; padding: 9px 17px; cursor: pointer; font-weight: 600; font-size: 14.5px;
+  background: linear-gradient(135deg, var(--t1), var(--t2)); color: #fff; box-shadow: 0 6px 16px -8px var(--t1); text-decoration: none; }
+.btn:hover { filter: brightness(1.05); }
+.btn:disabled { opacity: .55; cursor: not-allowed; filter: none; }
+.btn.quiet { background: #fff; color: var(--ink); box-shadow: 0 0 0 1px var(--line), 0 6px 16px -10px rgba(29, 36, 51, .35); }
+.btn.big { padding: 13px 26px; font-size: 16px; }
+.btn.small { padding: 6px 12px; font-size: 13px; }
+.link { background: none; border: 0; padding: 0; color: var(--t1); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-size: 13.5px; }
+
+main { padding-top: 22px; padding-bottom: 40px; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 18px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+.drops { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.drop { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px 14px 22px; border-radius: 14px;
+  border: 1.5px dashed var(--line); background: #fbfcfe; cursor: pointer; overflow: hidden; transition: border-color .2s, background .2s; }
+.drop::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--c); }
+.drop:hover, .drop.over { border-color: var(--c); background: #fff; }
+.drop.has { border-style: solid; border-color: var(--line); background: #fff; }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--soft); color: var(--c); }
+.drop b { display: block; font-weight: 600; font-size: 15px; }
+.drop .nm { display: block; color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drop.has .nm { color: var(--ink); }
+.drop .x { border: 0; background: var(--track); width: 32px; height: 32px; border-radius: 10px; cursor: pointer; font-size: 17px; font-weight: 600; }
+.chipline { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 10px; font-size: 13.5px; color: var(--muted); }
+
+.send { display: flex; gap: 12px; align-items: flex-start; margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: var(--t1s); }
+.switch { flex: none; position: relative; width: 44px; height: 26px; margin-top: 1px; }
+.switch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; margin: 0; }
+.switch span { position: absolute; inset: 0; border-radius: 99px; background: #cfd5df; transition: background .2s; pointer-events: none; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .2s var(--ease); }
+.switch input:checked + span { background: linear-gradient(135deg, var(--t1), var(--t2)); }
+.switch input:checked + span::after { transform: translateX(18px); }
+.switch input:disabled + span { opacity: .5; }
+.send b { font-weight: 600; }
+.send .sub { margin-top: 2px; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; border-radius: 99px; padding: 2px 10px; }
+.status i { width: 8px; height: 8px; border-radius: 50%; }
+.status.good { background: var(--good-bg); color: var(--good); } .status.good i { background: var(--good-c); }
+.status.warn { background: var(--warn-bg); color: var(--warn); } .status.warn i { background: var(--warn-c); }
+.status.bad { background: var(--bad-bg); color: var(--bad); } .status.bad i { background: var(--bad-c); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 12px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; padding: 4px 11px; font-size: 13px; font-weight: 600; background: var(--track); color: var(--muted); }
+.pill i { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; background: #fff; }
+.pill.now { background: var(--t1s); color: var(--t1); } .pill.now i { background: var(--t1); color: #fff; }
+.pill.done { background: var(--good-bg); color: var(--good); } .pill.done i { background: var(--good-c); color: #fff; }
+.pill.bad { background: var(--bad-bg); color: var(--bad); } .pill.bad i { background: var(--bad-c); color: #fff; }
+.pill.skip { opacity: .45; }
+.bar { height: 10px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--t1), var(--t2)); transition: width .4s var(--ease); }
+.line { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 13.5px; color: var(--muted); }
+.line span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.result { border-radius: 14px; padding: 14px 16px; margin-top: 14px; border: 1px solid; }
+.result.good { background: var(--good-bg); border-color: #c9ecd7; } .result.warn { background: var(--warn-bg); border-color: #f5e1ad; } .result.bad { background: var(--bad-bg); border-color: #f6cfca; }
+.result h3 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.result.good h3 { color: var(--good); } .result.warn h3 { color: var(--warn); } .result.bad h3 { color: var(--bad); }
+.result p { margin: 6px 0 0; font-size: 14px; }
+.result .actions { margin-top: 12px; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.fact { background: rgba(255, 255, 255, .8); border-radius: 12px; padding: 9px 11px; min-width: 0; }
+.fact span { display: block; font-size: 12.5px; color: var(--muted); }
+.fact b { display: block; font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.loghead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.log { margin-top: 12px; height: 340px; overflow: auto; background: #fbfcfe; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+.log div { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; padding: 1px 0; }
+.log time { color: var(--faint); font-variant-numeric: tabular-nums; }
+.log .check { background: var(--warn-bg); border-radius: 6px; } .log .err { background: var(--bad-bg); border-radius: 6px; color: var(--bad); } .log .ok { color: var(--good); font-weight: 600; }
+.log .empty { display: block; color: var(--faint); }
+.steps-help { margin: 12px 0 0; padding-left: 20px; color: var(--muted); font-size: 13.5px; }
+.steps-help li { margin: 3px 0; }
+
+.modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(29, 36, 51, .35); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.modal .card { width: min(420px, 100%); box-shadow: var(--sh-up); }
+.modal input[type=password] { width: 100%; margin-top: 14px; padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); font-size: 15px; }
+.modal .actions { justify-content: flex-end; }
+.modal .err { color: var(--bad); font-size: 13.5px; margin-top: 8px; }
+
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .wrap { padding-left: 16px; padding-right: 16px; }
+  .brand h1 { font-size: 18px; }
+  .tools { flex: 1 1 100%; justify-content: space-between; }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .drop { grid-template-columns: 38px minmax(0, 1fr) auto; padding-left: 18px; }
+  .drop .ic { width: 38px; height: 38px; }
+  .btn.big { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <div class="badge" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M13.2 2.2 4.6 13.1c-.4.5 0 1.2.6 1.2h5.3l-1.4 7.3c-.1.7.8 1.1 1.2.5l8.6-10.9c.4-.5 0-1.2-.6-1.2H13l1.4-7.3c.1-.7-.8-1.1-1.2-.5Z"/></svg></div>
+      <div><h1>PM Surya Ghar Report Maker</h1><p>Make the district report and update the dashboard</p></div>
+    </div>
+    <div class="tools">
+      <div class="dots" id="themes" role="group" aria-label="Colour theme"></div>
+      <a class="btn quiet" id="open-dash" target="_blank" rel="noopener" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v5h8V3zM3 21h8v-5H3z"/></svg>
+        Open dashboard</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="col">
+    <section class="card">
+      <h2>1. Choose the portal files</h2>
+      <p class="sub">The consumer-level CSV exports from the national portal, exactly as downloaded. They are read on this computer and are not sent anywhere.</p>
+      <div class="drops" id="drops"></div>
+      <div class="chipline"><span>Targets: the built-in district targets are used unless you choose a file.</span>
+        <button class="link" type="button" id="blank">Download a blank targets file</button></div>
+
+      <div class="send">
+        <label class="switch"><input type="checkbox" id="send" aria-describedby="send-note"><span></span></label>
+        <div style="min-width:0">
+          <b>Send the report to the dashboard and open it</b> <span class="status" id="link-status"></span>
+          <p class="sub" id="send-note"></p>
+          <div class="actions" style="margin-top:8px"><button class="btn quiet small" type="button" id="test">Test connection</button>
+            <button class="btn quiet small" type="button" id="forget" hidden>Forget password</button></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn big" type="button" id="create">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          Create report</button>
+        <button class="btn quiet" type="button" id="cancel" hidden>Cancel</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2. Progress</h2>
+      <div class="pills" id="pills"></div>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="line"><span id="detail">Choose the files and press Create report.</span><span id="clock"></span></div>
+      <div id="result"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card">
+      <div class="loghead"><h2>Log</h2>
+        <div class="actions" style="margin-top:0"><button class="btn quiet small" type="button" id="copy">Copy</button><button class="btn quiet small" type="button" id="clear">Clear</button></div></div>
+      <div class="log" id="log" aria-live="polite"><span class="empty">What the report maker does appears here.</span></div>
+    </section>
+    <section class="card">
+      <h2>How it works</h2>
+      <ol class="steps-help">
+        <li>Choose the SBPDCL and NBPDCL files (one is enough).</li>
+        <li>Press Create report. The first time, the report engine is fetched; this takes about a minute.</li>
+        <li>The Excel report is saved to your Downloads folder.</li>
+        <li>With sending on, you type the upload password once, the report goes to the dashboard, and the dashboard opens.</li>
+      </ol>
+    </section>
+  </div>
+</main>
+
+<div class="modal" id="pw-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pw-title">
+  <form class="card" id="pw-form">
+    <h2 id="pw-title">Upload password</h2>
+    <p class="sub">The password set for the dashboard upload. It is kept only while this page is open.</p>
+    <input type="password" id="pw" autocomplete="current-password" aria-label="Upload password">
+    <div class="err" id="pw-err" hidden></div>
+    <div class="actions"><button class="btn quiet" type="button" id="pw-cancel">Cancel</button><button class="btn" type="submit">Continue</button></div>
+  </form>
+</div>
+
+<script>
+'use strict';
+const CFG = window.PMSG_CONFIG || {};
+const LINK = String(CFG.dashboardLink || '').trim();
+const $ = (s) => document.querySelector(s);
+const el = (tag, attrs, ...kids) => {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) {
+    if (k === 'class') e.className = attrs[k]; else if (k === 'text') e.textContent = attrs[k]; else if (k === 'html') e.innerHTML = attrs[k];
+    else if (k === 'on') for (const ev in attrs.on) e.addEventListener(ev, attrs.on[ev]); else e.setAttribute(k, attrs[k]);
+  }
+  for (const kid of kids) if (kid !== null && kid !== undefined && kid !== false) e.append(kid);
+  return e;
+};
+const nf = new Intl.NumberFormat('en-IN');
+const int = (v) => nf.format(Math.round(+v || 0));
+const size = (b) => b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';
+
+/* ---------- themes (same as the dashboard) */
+const THEMES = { sky: ['Sky', '#2f7df6', '#22c1dc'], mint: ['Mint', '#0a9b85', '#4eb068'], sunrise: ['Sunrise', '#f0752f', '#f7a531'], lavender: ['Lavender', '#7a65c2', '#e27aab'] };
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+function applyTheme(id) {
+  const t = THEMES[id] || THEMES.sunrise, st = document.documentElement.style;
+  st.setProperty('--t1', t[1]); st.setProperty('--t2', t[2]); st.setProperty('--t1a', rgba(t[1], .16)); st.setProperty('--t2a', rgba(t[2], .14)); st.setProperty('--t1s', rgba(t[1], .09));
+  try { localStorage.setItem('pmsg-maker-theme', id); } catch (e) { /* not remembered, still works */ }
+  $('#themes').replaceChildren(...Object.keys(THEMES).map((k) => el('button', { type: 'button', title: THEMES[k][0], 'aria-label': THEMES[k][0] + ' colours', 'aria-pressed': String(k === id),
+    style: 'background:linear-gradient(135deg,' + THEMES[k][1] + ',' + THEMES[k][2] + ')', on: { click: () => applyTheme(k) } })));
+}
+let savedTheme = 'sunrise'; try { savedTheme = localStorage.getItem('pmsg-maker-theme') || 'sunrise'; } catch (e) { /* default */ }
+applyTheme(THEMES[savedTheme] ? savedTheme : 'sunrise');
+
+/* ---------- files */
+const SLOTS = [
+  { id: 'sbpdcl', label: 'SBPDCL file', hint: 'South Bihar export (.csv)', c: 'var(--sb)', soft: 'rgba(42,120,214,.1)' },
+  { id: 'nbpdcl', label: 'NBPDCL file', hint: 'North Bihar export (.csv)', c: 'var(--nb)', soft: 'rgba(235,104,52,.1)' },
+  { id: 'targets', label: 'Targets file (optional)', hint: 'District, Target (.csv)', c: 'var(--t1)', soft: 'var(--t1s)' },
+];
+const files = { sbpdcl: null, nbpdcl: null, targets: null };
+function drawDrops() {
+  $('#drops').replaceChildren(...SLOTS.map((s) => {
+    const f = files[s.id];
+    const input = el('input', { type: 'file', accept: '.csv,text/csv', 'aria-label': 'Choose the ' + s.label, on: { change: (ev) => pick(s.id, ev.target.files[0]) } });
+    const box = el('label', { class: 'drop' + (f ? ' has' : ''), style: '--c:' + s.c + ';--soft:' + s.soft }, input,
+      el('span', { class: 'ic', html: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5' + (f ? 'M9 15l2 2 4-4' : 'M12 11v6M9 14l3-3 3 3') + '"/></svg>' }),
+      el('span', { style: 'min-width:0' }, el('b', { text: s.label }), el('span', { class: 'nm', text: f ? f.name + '  (' + size(f.size) + ')' : 'Drop the file here or select to choose. ' + s.hint })),
+      f ? el('button', { class: 'x', type: 'button', 'aria-label': 'Remove ' + s.label, text: '×', on: { click: (ev) => { ev.preventDefault(); pick(s.id, null); } } }) : el('span', { class: 'btn quiet small', text: 'Choose' }));
+    box.addEventListener('dragover', (ev) => { ev.preventDefault(); box.classList.add('over'); });
+    box.addEventListener('dragleave', () => box.classList.remove('over'));
+    box.addEventListener('drop', (ev) => { ev.preventDefault(); box.classList.remove('over'); if (ev.dataTransfer.files[0]) pick(s.id, ev.dataTransfer.files[0]); });
+    return box;
+  }));
+}
+function pick(id, f) {
+  if (f && !/\.csv$/i.test(f.name) && !/csv|text/.test(f.type || '')) { say('The ' + id.toUpperCase() + ' file must be a .csv file: ' + f.name, 'err'); return; }
+  files[id] = f || null; drawDrops();
+  if (f) say('Chosen for ' + (id === 'targets' ? 'targets' : id.toUpperCase()) + ': ' + f.name + ' (' + size(f.size) + ')');
+  warm();
+}
+drawDrops();
+$('#blank').addEventListener('click', () => download(new Blob(['District,Target\r\n'], { type: 'text/csv' }), 'district_targets.csv'));
+
+/* ---------- dashboard link and password */
+let password = '';
+const linkState = () => {
+  if (!LINK) return ['warn', 'No dashboard link', 'No dashboard link is set in config.js, so the report is only saved to this computer.'];
+  if (!/^https:\/\/script\.google\.com\//i.test(LINK)) return ['bad', 'Wrong link', 'The link in config.js is not the dashboard web app link. It starts with https://script.google.com/'];
+  if (/\/dev\/?(\?.*)?$/.test(LINK)) return ['bad', 'Test link', 'The link in config.js ends with /dev. Use the web app link that ends with /exec.'];
+  if (!/\/exec\/?(\?.*)?$/.test(LINK)) return ['bad', 'Wrong link', 'The web app link ends with /exec. Copy it again from Deploy > Manage deployments.'];
+  return ['good', 'Dashboard link set', 'You type the upload password once; it is kept only while this page is open.'];
+};
+function drawSend() {
+  const [cls, label, note] = linkState(), ok = cls === 'good';
+  $('#link-status').className = 'status ' + cls; $('#link-status').replaceChildren(el('i'), label);
+  $('#send-note').textContent = note;
+  $('#send').disabled = !ok; if (!ok) $('#send').checked = false;
+  $('#test').hidden = !ok; $('#forget').hidden = !password;
+  const od = $('#open-dash'); od.hidden = !ok; if (ok) od.href = LINK;
+}
+$('#send').checked = linkState()[0] === 'good';
+drawSend();
+function askPassword(error) {
+  return new Promise((resolve) => {
+    const m = $('#pw-modal'), input = $('#pw'), err = $('#pw-err');
+    input.value = ''; err.hidden = !error; err.textContent = error || '';
+    m.hidden = false; setTimeout(() => input.focus(), 30);
+    const done = (v) => { m.hidden = true; $('#pw-form').onsubmit = null; $('#pw-cancel').onclick = null; document.removeEventListener('keydown', esc); resolve(v); };
+    const esc = (ev) => { if (ev.key === 'Escape') done(''); };
+    document.addEventListener('keydown', esc);
+    $('#pw-form').onsubmit = (ev) => { ev.preventDefault(); const v = input.value.trim(); if (!v) { err.hidden = false; err.textContent = 'Type the password.'; return; } done(v); };
+    $('#pw-cancel').onclick = () => done('');
+  });
+}
+$('#forget').addEventListener('click', () => { password = ''; drawSend(); say('Password forgotten. It will be asked again.'); });
+
+/* Sends one request to the dashboard's script. Returns its answer, or throws an Error with a plain message. */
+async function callDashboard(payload) {
+  let res;
+  try {
+    res = await fetch(LINK, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload), redirect: 'follow' });
+  } catch (e) {
+    throw new Error('Could not reach the dashboard. Check the internet connection. If it keeps happening, the web app may not be deployed with access "Anyone", or Upload.gs is missing.');
+  }
+  let answer = null;
+  try { answer = await res.json(); } catch (e) { /* not the script's answer */ }
+  if (!answer || typeof answer.ok !== 'boolean') throw new Error('The dashboard link did not answer like the dashboard script (status ' + res.status + '). Check the link in config.js and that Upload.gs is deployed.');
+  if (!answer.ok) { const e = new Error(answer.error || 'The dashboard refused the upload.'); e.wrongPassword = /Wrong upload password/.test(answer.error || ''); throw e; }
+  return answer;
+}
+$('#test').addEventListener('click', async () => {
+  if (!password) { password = await askPassword(); if (!password) return; drawSend(); }
+  const b = $('#test'); b.disabled = true; b.textContent = 'Checking…';
+  try { const a = await callDashboard({ password, action: 'check' }); say('Connected to the dashboard: sheet "' + (a.sheet || '?') + '".', 'ok'); flash('good', 'Connected', 'Link and password are right.'); }
+  catch (e) { if (e.wrongPassword) { password = ''; drawSend(); } say('Dashboard test failed: ' + e.message, 'err'); flash('bad', 'Not connected', e.message); }
+  finally { b.disabled = false; b.textContent = 'Test connection'; }
+});
+
+/* ---------- log, progress */
+const t0 = { v: 0 };
+function say(text, kind) {
+  const box = $('#log'); const empty = box.querySelector('.empty'); if (empty) empty.remove();
+  if (!kind && /^CHECK:/.test(text)) kind = 'check';
+  const now = new Date();
+  box.append(el('div', { class: kind || '' }, el('time', { text: now.toTimeString().slice(0, 8) }), el('span', { text })));
+  box.scrollTop = box.scrollHeight;
+}
+$('#copy').addEventListener('click', async () => {
+  const text = [...$('#log').querySelectorAll('div')].map((d) => d.textContent.slice(0, 8) + '  ' + d.textContent.slice(8)).join('\n');
+  try { await navigator.clipboard.writeText(text); say('Log copied.'); } catch (e) { say('Could not copy the log in this browser.', 'err'); }
+});
+$('#clear').addEventListener('click', () => { $('#log').replaceChildren(el('span', { class: 'empty', text: 'What the report maker does appears here.' })); });
+const STEPS = [['engine', 'Engine'], ['SBPDCL', 'SBPDCL'], ['NBPDCL', 'NBPDCL'], ['build', 'Build'], ['write', 'Excel'], ['upload', 'Dashboard']];
+const job = { state: {}, weights: {}, starts: {} };
+function drawPills() {
+  $('#pills').replaceChildren(...STEPS.map(([id, label], i) => {
+    const st = job.state[id] || 'wait';
+    return el('span', { class: 'pill ' + (st === 'wait' ? '' : st) }, el('i', { text: st === 'done' ? '✓' : st === 'bad' ? '!' : String(i + 1) }), label);
+  }));
+}
+function setStep(id, st) { job.state[id] = st; drawPills(); }
+function setBar(frac) { $('#bar').style.width = Math.max(0, Math.min(100, frac * 100)) + '%'; }
+function phaseProgress(id, frac) {
+  const at = (job.starts[id] || 0) + (job.weights[id] || 0) * Math.max(0, Math.min(1, frac));
+  setBar(at);
+}
+let clockTimer = 0;
+function startClock() { t0.v = Date.now(); clearInterval(clockTimer); clockTimer = setInterval(() => { const s = Math.round((Date.now() - t0.v) / 1000); $('#clock').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }, 500); }
+function stopClock() { clearInterval(clockTimer); }
+function flash(kind, title, text, extra) {
+  $('#result').replaceChildren(el('div', { class: 'result ' + kind }, el('h3', { text: title }), text ? el('p', { text }) : null, extra || null));
+}
+drawPills();
+
+/* ---------- engine */
+let worker = null, engineReady = false;
+function newWorker() {
+  worker = new Worker('engine.js');
+  worker.onmessage = onWorker;
+  worker.onerror = (e) => { finishError('The report engine stopped: ' + (e.message || 'unknown problem') + '.'); };
+}
+function warm() { if (!worker) { newWorker(); worker.postMessage({ type: 'warm', version: CFG.engineVersion || '' }); } }
+let running = null;
+function onWorker(ev) {
+  const m = ev.data;
+  if (m.type === 'ready') { engineReady = true; return; }
+  if (!running) return;
+  if (m.type === 'stage' && m.stage === 'engine') { setStep('engine', 'now'); $('#detail').textContent = engineReady ? 'Starting…' : 'Getting the report engine (the first time takes about a minute)…'; }
+  else if (m.type === 'stage' && m.stage === 'read') { setStep('engine', 'done'); engineReady = true; phaseProgress('engine', 1); }
+  else if (m.type === 'log') say(m.text);
+  else if (m.type === 'progress') {
+    const ids = STEPS.map((s) => s[0]); const i = ids.indexOf(m.phase);
+    if (i >= 0) { ids.slice(0, i).forEach((id) => { if (job.state[id] === 'now') setStep(id, 'done'); }); if (job.state[m.phase] !== 'skip') setStep(m.phase, m.frac >= 1 ? 'done' : 'now'); }
+    phaseProgress(m.phase, m.frac);
+    if (m.text) $('#detail').textContent = m.text;
+  } else if (m.type === 'error') finishError(m.text);
+  else if (m.type === 'done') afterReport(m.facts, m.bytes);
+}
+
+/* ---------- run */
+async function create() {
+  if (running) return;
+  if (!files.sbpdcl && !files.nbpdcl) { flash('bad', 'Choose a file first', 'Choose the SBPDCL file, the NBPDCL file, or both.'); say('Choose the SBPDCL file, the NBPDCL file, or both.', 'err'); return; }
+  const sending = $('#send').checked && linkState()[0] === 'good';
+  if (sending && !password) { password = await askPassword(); if (!password) { $('#detail').textContent = 'Not started: no password was entered.'; return; } drawSend(); }
+  // a tab opened now (while the click counts) can be pointed at the dashboard later without being blocked
+  let tab = null;
+  if (sending) {
+    try { tab = window.open('', '_blank'); if (tab) { tab.document.title = 'Updating the dashboard'; tab.document.body.style.cssText = 'font:16px Segoe UI,sans-serif;color:#667085;display:grid;place-items:center;height:90vh;margin:0';
+      tab.document.body.textContent = 'The dashboard opens here once the new report has been loaded…'; } } catch (e) { tab = null; }
+  }
+  running = { sending, tab };
+  const sz = { SBPDCL: files.sbpdcl ? files.sbpdcl.size : 0, NBPDCL: files.nbpdcl ? files.nbpdcl.size : 0 };
+  const both = sz.SBPDCL + sz.NBPDCL || 1, reading = sending ? 0.74 : 0.8;
+  job.weights = { engine: engineReady ? 0.02 : 0.1, SBPDCL: reading * sz.SBPDCL / both, NBPDCL: reading * sz.NBPDCL / both, build: 0.05, write: 0.03, upload: sending ? 0.06 : 0 };
+  const sumw = Object.values(job.weights).reduce((a, b) => a + b, 0); for (const k in job.weights) job.weights[k] /= sumw;
+  let at = 0; job.starts = {}; for (const [id] of STEPS) { job.starts[id] = at; at += job.weights[id]; }
+  job.state = {}; for (const [id] of STEPS) job.state[id] = (id === 'SBPDCL' && !sz.SBPDCL) || (id === 'NBPDCL' && !sz.NBPDCL) || (id === 'upload' && !sending) ? 'skip' : 'wait';
+  drawPills(); setBar(0); $('#result').replaceChildren(); startClock();
+  $('#create').disabled = true; $('#cancel').hidden = false; document.querySelectorAll('.drop input, .drop .x, #send').forEach((n) => { n.disabled = true; });
+  say('Making the report' + (sending ? ' and sending it to the dashboard' : '') + '…');
+  if (!worker) newWorker();
+  worker.postMessage({ type: 'run', version: CFG.engineVersion || '', files: { ...files } });
+}
+async function afterReport(facts, bytes) {
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  running.blob = blob; running.facts = facts;
+  ['SBPDCL', 'NBPDCL', 'build', 'write'].forEach((id) => { if (job.state[id] !== 'skip') setStep(id, 'done'); });
+  phaseProgress('write', 1);
+  download(blob, facts.name);
+  say('Excel report saved to your Downloads folder: ' + facts.name, 'ok');
+  if (!running.sending) { finish(facts, null); return; }
+  setStep('upload', 'now'); $('#detail').textContent = 'Sending to the dashboard (about a minute)…'; phaseProgress('upload', 0.15);
+  try {
+    say('Sending ' + facts.name + ' (' + size(bytes.byteLength) + ') to the dashboard…');
+    const answer = await callDashboard({ password, action: 'upload', name: facts.name, data: await toBase64(blob) });
+    const upd = answer.updated || [];
+    say('Dashboard updated: ' + upd.length + ' tabs loaded' + (upd.length ? ' (' + upd.join(', ') + ')' : ''), 'ok');
+    if (answer.left && answer.left.length) say('  Left as they were: ' + answer.left.join(', '));
+    setStep('upload', 'done'); phaseProgress('upload', 1);
+    if (running.tab && !running.tab.closed) running.tab.location.href = LINK; else running.openFailed = true;
+    finish(facts, answer);
+  } catch (e) {
+    setStep('upload', 'bad');
+    if (e.wrongPassword) { password = ''; drawSend(); }
+    if (running.tab && !running.tab.closed) running.tab.close();
+    say('CHECK: The report was saved but NOT sent to the dashboard. ' + e.message, 'err');
+    finish(facts, null, e.message + (e.wrongPassword ? ' Press Create report again and type the right password.' : ''));
+  }
+}
+function finish(facts, answer, sendError) {
+  stopClock(); const r = running; running = null; unlock();
+  const checks = facts.warnings.length, kind = sendError ? 'warn' : checks ? 'warn' : 'good';
+  const title = sendError ? 'Report made, but not sent to the dashboard' : answer ? 'Report made and dashboard updated' : 'Report made';
+  $('#detail').textContent = sendError ? 'Saved, but not sent to the dashboard.' : answer ? 'Done. Dashboard updated.' : 'Done. The Excel report is in your Downloads folder.';
+  setBar(1);
+  const factBox = el('div', { class: 'facts' },
+    el('div', { class: 'fact' }, el('span', { text: 'Applications' }), el('b', { text: int(facts.applications) })),
+    el('div', { class: 'fact' }, el('span', { text: 'Data up to' }), el('b', { text: facts.as_of || '-' })),
+    el('div', { class: 'fact' }, el('span', { text: 'ULA rows left out' }), el('b', { text: int(facts.ula) })));
+  const text = sendError ? sendError : checks ? checks + ' point' + (checks > 1 ? 's' : '') + ' to check: see the highlighted lines in the log.' : '';
+  const acts = el('div', { class: 'actions' }, el('button', { class: 'btn quiet small', type: 'button', text: 'Download Excel again', on: { click: () => download(r.blob, facts.name) } }),
+    answer ? el('a', { class: 'btn small', href: LINK, target: '_blank', rel: 'noopener', text: r.openFailed ? 'Open dashboard' : 'Open dashboard again' }) : null);
+  flash(kind, title, text, el('div', {}, factBox, acts));
+  say('Done in ' + $('#clock').textContent + '.', 'ok');
+}
+function finishError(text) {
+  stopClock();
+  const r = running; running = null; unlock();
+  STEPS.forEach(([id]) => { if (job.state[id] === 'now') setStep(id, 'bad'); });
+  if (r && r.tab && !r.tab.closed) r.tab.close();
+  say(text, 'err'); flash('bad', 'The report was not made', text); $('#detail').textContent = 'Stopped.';
+}
+function unlock() { $('#create').disabled = false; $('#cancel').hidden = true; document.querySelectorAll('.drop input, .drop .x').forEach((n) => { n.disabled = false; }); $('#send').disabled = linkState()[0] !== 'good'; }
+$('#create').addEventListener('click', create);
+$('#cancel').addEventListener('click', () => {
+  if (!running) return;
+  if (worker) { worker.terminate(); worker = null; engineReady = false; }
+  const r = running; running = null; stopClock(); unlock();
+  if (r.tab && !r.tab.closed) r.tab.close();
+  STEPS.forEach(([id]) => { if (job.state[id] === 'now') setStep(id, 'wait'); });
+  say('Cancelled.'); flash('warn', 'Cancelled', 'Nothing was sent to the dashboard.'); $('#detail').textContent = 'Cancelled.';
+});
+
+/* ---------- helpers */
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+function toBase64(blob) {
+  return new Promise((resolve, reject) => { const fr = new FileReader(); fr.onload = () => resolve(String(fr.result).split(',')[1] || ''); fr.onerror = reject; fr.readAsDataURL(blob); });
+}
+</script>
+</body>
+</html>
