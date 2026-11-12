@@ -360,8 +360,9 @@ function phaseProgress(id, frac) {
   setBar(at);
 }
 let clockTimer = 0;
-function startClock() { t0.v = Date.now(); clearInterval(clockTimer); clockTimer = setInterval(() => { const s = Math.round((Date.now() - t0.v) / 1000); $('#clock').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }, 500); }
-function stopClock() { clearInterval(clockTimer); }
+function startClock() { t0.v = Date.now(); clearInterval(clockTimer); showClock(); clockTimer = setInterval(showClock, 500); }
+function showClock() { const s = Math.round((Date.now() - t0.v) / 1000); $('#clock').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function stopClock() { clearInterval(clockTimer); showClock(); }
 function flash(kind, title, text, extra) {
   $('#result').replaceChildren(el('div', { class: 'result ' + kind }, el('h3', { text: title }), text ? el('p', { text }) : null, extra || null));
 }
@@ -370,9 +371,19 @@ drawPills();
 /* ---------- engine */
 let worker = null, engineReady = false;
 function newWorker() {
-  worker = new Worker('engine.js');
-  worker.onmessage = onWorker;
-  worker.onerror = (e) => { finishError('The report engine stopped: ' + (e.message || 'unknown problem') + '.'); };
+  const w = new Worker('engine.js');
+  w.onmessage = (ev) => { if (w === worker) onWorker(ev); };      // a stopped engine's late messages are ignored
+  w.onerror = (e) => {
+    e.preventDefault();
+    if (w !== worker) return;
+    stopWorker();
+    if (running && !running.uploading) finishError('The report engine stopped: ' + (e.message || 'the browser may have run out of memory') + '. Close other tabs and try again.');
+  };
+  worker = w;
+}
+function stopWorker() {
+  const w = worker; worker = null; engineReady = false;
+  if (w) { w.onmessage = null; w.onerror = null; try { w.terminate(); } catch (x) { /* already gone */ } }
 }
 function warm() { if (!worker) { newWorker(); worker.postMessage({ type: 'warm', version: CFG.engineVersion || '' }); } }
 let running = null;
@@ -393,8 +404,13 @@ function onWorker(ev) {
 }
 
 /* ---------- run */
+let starting = false;
 async function create() {
-  if (running) return;
+  if (running || starting) return;
+  starting = true;
+  try { await begin(); } finally { starting = false; }
+}
+async function begin() {
   if (!files.sbpdcl && !files.nbpdcl) { flash('bad', 'Choose a file first', 'Choose the SBPDCL file, the NBPDCL file, or both.'); say('Choose the SBPDCL file, the NBPDCL file, or both.', 'err'); return; }
   const sending = $('#send').checked && linkState()[0] === 'good';
   if (sending && !password) { password = await askPassword(); if (!password) { $('#detail').textContent = 'Not started: no password was entered.'; return; } drawSend(); }
@@ -418,6 +434,7 @@ async function create() {
   worker.postMessage({ type: 'run', version: CFG.engineVersion || '', files: { ...files } });
 }
 async function afterReport(facts, bytes) {
+  if (!running) return;
   const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   running.blob = blob; running.facts = facts;
   ['SBPDCL', 'NBPDCL', 'build', 'write'].forEach((id) => { if (job.state[id] !== 'skip') setStep(id, 'done'); });
@@ -425,10 +442,12 @@ async function afterReport(facts, bytes) {
   download(blob, facts.name);
   say('Excel report saved to your Downloads folder: ' + facts.name, 'ok');
   if (!running.sending) { finish(facts, null); return; }
+  const r = running; r.uploading = true; $('#cancel').hidden = true;      // an upload under way cannot be stopped half-way
   setStep('upload', 'now'); $('#detail').textContent = 'Sending to the dashboard (about a minute)…'; phaseProgress('upload', 0.15);
   try {
     say('Sending ' + facts.name + ' (' + size(bytes.byteLength) + ') to the dashboard…');
     const answer = await callDashboard({ password, action: 'upload', name: facts.name, data: await toBase64(blob) });
+    if (running !== r) return;
     const upd = answer.updated || [];
     say('Dashboard updated: ' + upd.length + ' tabs loaded' + (upd.length ? ' (' + upd.join(', ') + ')' : ''), 'ok');
     if (answer.left && answer.left.length) say('  Left as they were: ' + answer.left.join(', '));
@@ -436,6 +455,7 @@ async function afterReport(facts, bytes) {
     if (running.tab && !running.tab.closed) running.tab.location.href = LINK; else running.openFailed = true;
     finish(facts, answer);
   } catch (e) {
+    if (running !== r) return;
     setStep('upload', 'bad');
     if (e.wrongPassword) { password = ''; drawSend(); }
     if (running.tab && !running.tab.closed) running.tab.close();
@@ -468,9 +488,10 @@ function finishError(text) {
 }
 function unlock() { $('#create').disabled = false; $('#cancel').hidden = true; document.querySelectorAll('.drop input, .drop .x').forEach((n) => { n.disabled = false; }); $('#send').disabled = linkState()[0] !== 'good'; }
 $('#create').addEventListener('click', create);
+window.addEventListener('beforeunload', (ev) => { if (running) { ev.preventDefault(); ev.returnValue = ''; } });
 $('#cancel').addEventListener('click', () => {
   if (!running) return;
-  if (worker) { worker.terminate(); worker = null; engineReady = false; }
+  stopWorker();
   const r = running; running = null; stopClock(); unlock();
   if (r.tab && !r.tab.closed) r.tab.close();
   STEPS.forEach(([id]) => { if (job.state[id] === 'now') setStep(id, 'wait'); });
